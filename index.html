@@ -1,0 +1,1198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ADR Property Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,300..800;1,100,400&display=swap">
+<style>
+/* Editorial, photo-led. Square edges, hairline rules, one wide grotesk at two widths.
+   Colour comes from the photography; cobalt is reserved for actions and the selected storage unit. */
+:root{
+  color-scheme: light;
+  --paper:#FFFFFF;
+  --stone:#EEEDE9;
+  --ink:#15171A;
+  --ink-soft:#5D6066;
+  --rule:#D8D6D0;
+  --cobalt:#2747D6;
+  --cobalt-dark:#1B36AE;
+  --open:#1E7A4C;
+
+  --f:"Archivo", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --gl:max(24px, env(safe-area-inset-left, 0px));
+  --gr:max(24px, env(safe-area-inset-right, 0px));
+  --max:1320px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--f);font-stretch:100%;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--cobalt);outline-offset:2px}
+.wrap{max-width:var(--max);margin:0 auto;padding-left:var(--gl);padding-right:var(--gr)}
+h1,h2,h3{margin:0;font-weight:600;font-stretch:118%;letter-spacing:-.025em;line-height:1;text-wrap:balance}
+p{margin:0}
+.label{font-size:.72rem;font-weight:600;font-stretch:115%;letter-spacing:.09em;text-transform:uppercase}
+.soft{color:var(--ink-soft)}
+.tnum{font-variant-numeric:tabular-nums}
+.arrow-link{display:inline-flex;gap:.5rem;align-items:center;font-weight:600;border-bottom:1.5px solid currentColor;padding-bottom:2px}
+.arrow-link:hover{color:var(--cobalt)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.75rem;border:0;border-radius:0;padding:1rem 1.4rem;font-weight:600;font-size:.95rem;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+.btn-ink{background:var(--ink);color:#fff}.btn-ink:hover{background:#000}
+.btn-cobalt{background:var(--cobalt);color:#fff}.btn-cobalt:hover{background:var(--cobalt-dark)}
+.btn-line{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ink)}.btn-line:hover{background:var(--ink);color:#fff}
+
+/* ---------- header ---------- */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--paper)}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:var(--paper);border-bottom:1px solid var(--rule)}
+header .wrap{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:2rem;height:72px}
+.wordmark{display:flex;align-items:baseline;gap:.6rem}
+.wordmark b{font-size:1.6rem;font-weight:800;font-stretch:125%;letter-spacing:-.04em;line-height:1}
+.wordmark span{font-size:.78rem;color:var(--ink-soft);font-stretch:110%;line-height:1.1}
+nav.main{display:flex;gap:2rem;justify-content:center}
+nav.main a{font-size:.95rem;font-weight:500;padding:.4rem 0;border-bottom:1.5px solid transparent}
+nav.main a:hover{border-color:var(--ink)}
+.h-right{display:flex;align-items:center;gap:1.5rem;font-size:.95rem;font-weight:500}
+.h-right button.link{background:none;border:0;padding:0;cursor:pointer;font-weight:500}
+.h-right button.link:hover{text-decoration:underline}
+.h-right .btn{padding:.75rem 1.1rem}
+.menu-toggle{display:none;background:none;border:0;font-weight:600;cursor:pointer;padding:.5rem 0}
+@media (max-width:1100px){
+  nav.main{display:none;position:absolute;top:100%;max-height:calc(100svh - 72px);overflow-y:auto;overscroll-behavior:contain;left:0;right:0;background:var(--paper);flex-direction:column;gap:0;padding:0 var(--gr) 1rem var(--gl);border-bottom:1px solid var(--rule)}
+  nav.main.open{display:flex}
+  nav.main a{padding:.9rem 0;border-bottom:1px solid var(--rule);font-size:1.1rem}
+  .menu-toggle{display:block}
+  header .wrap{grid-template-columns:auto 1fr auto}
+  .h-right{grid-column:3}
+}
+@media (max-width:640px){
+  .wordmark span,.h-right .hide-sm{display:none}
+  .h-right{gap:1rem}
+}
+
+/* ---------- hero ---------- */
+.hero{position:relative}
+.hero-img{position:relative;height:clamp(440px,68vh,680px);background:#3b352f;overflow:hidden}
+.hero-img img{width:100%;height:100%;object-fit:cover;object-position:center 40%}
+.hero-img::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.45) 0%,rgba(0,0,0,0) 60%),linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.6) 100%)}
+.hero-copy{position:absolute;left:0;right:0;bottom:0;z-index:2;color:#fff;padding-bottom:clamp(5.5rem,9vw,7rem)}
+.hero h1{font-size:clamp(2.6rem,6.6vw,6rem);font-weight:600;max-width:15ch;letter-spacing:-.035em;line-height:.95}
+.hero-meta{display:flex;justify-content:space-between;align-items:end;gap:2rem;flex-wrap:wrap;margin-top:1.5rem}
+.hero-meta p{max-width:44ch;font-size:1.05rem;color:rgba(255,255,255,.88)}
+.hero-meta .caption{font-size:.8rem;color:rgba(255,255,255,.7)}
+
+.search{position:relative;z-index:3;margin-top:-56px}
+.search-bar{display:grid;grid-template-columns:200px repeat(3,minmax(0,1fr)) auto;background:var(--paper);box-shadow:0 1px 0 var(--rule), 0 24px 50px -30px rgba(0,0,0,.35)}
+.seg{display:flex;flex-direction:column;justify-content:center;gap:.3rem;padding:1rem 1.25rem;border-right:1px solid var(--rule);min-width:0}
+.seg label{font-size:.68rem;font-weight:600;font-stretch:115%;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft)}
+.seg select,.seg input{border:0;background:transparent;font-size:1.05rem;font-weight:500;padding:0;outline:none;width:100%;min-width:0;cursor:pointer}
+.seg.type{background:var(--stone)}
+.seg.type select{font-weight:700}
+.search-bar .btn{height:100%;min-height:84px;padding-inline:2rem;font-size:1rem}
+@media (max-width:960px){
+  .search-bar{grid-template-columns:1fr 1fr}
+  .seg{border-bottom:1px solid var(--rule)}
+  .seg:nth-child(2n){border-right:0}
+  .search-bar .btn{grid-column:1/-1;min-height:60px}
+}
+@media (max-width:520px){
+  .search{margin-top:-32px}
+  .search-bar{grid-template-columns:1fr}
+  .seg{border-right:0}
+}
+
+/* ---------- intro ---------- */
+.intro{padding-block:clamp(4rem,8vw,7rem) clamp(3rem,6vw,5rem)}
+.intro .wrap{display:grid;grid-template-columns:1fr 2.2fr;gap:2rem}
+.intro p.big{font-size:clamp(1.5rem,2.6vw,2.15rem);line-height:1.25;font-weight:400;letter-spacing:-.015em;max-width:32ch}
+.intro p.big strong{font-weight:600}
+@media (max-width:760px){.intro .wrap{grid-template-columns:1fr}}
+
+/* ---------- portfolio ---------- */
+.portfolio .wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(1rem,2.5vw,2.5rem)}
+.pf{display:flex;flex-direction:column;gap:1rem}
+.pf-img{aspect-ratio:4/5;overflow:hidden;background:var(--stone);max-width:100%}
+.pf-img img{width:100%;height:100%;object-fit:cover;transition:transform .6s ease}
+.pf:hover .pf-img img{transform:scale(1.03)}
+.pf-num{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;border-top:1.5px solid var(--ink);padding-top:1rem}
+.pf-num b{font-size:clamp(3rem,5.5vw,4.75rem);font-weight:600;font-stretch:125%;letter-spacing:-.05em;line-height:.9}
+.pf-num span{font-weight:600;font-size:1.05rem;text-align:right}
+.pf p{color:var(--ink-soft);max-width:38ch}
+.doors{width:100%;height:100%;display:block}
+@media (max-width:860px){.portfolio .wrap{grid-template-columns:1fr}.pf-img{aspect-ratio:16/10}}
+
+/* ---------- listings ---------- */
+.listings{padding-block:clamp(5rem,9vw,8rem) 0}
+.sec-top{display:flex;justify-content:space-between;align-items:end;gap:2rem;flex-wrap:wrap;padding-bottom:1.5rem;border-bottom:1px solid var(--rule);margin-bottom:2.5rem}
+.sec-top h2{font-size:clamp(2rem,4.2vw,3.5rem)}
+.tabs{display:flex;gap:1.75rem}
+.tabs button{background:none;border:0;padding:.3rem 0;cursor:pointer;font-weight:500;color:var(--ink-soft);border-bottom:1.5px solid transparent;font-size:1rem}
+.tabs button[aria-pressed="true"]{color:var(--ink);border-color:var(--ink)}
+.l-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3rem 2rem}
+.listing{display:flex;flex-direction:column;gap:.9rem;min-width:0}
+.listing.feature{grid-column:span 2}
+.l-img{aspect-ratio:4/3;overflow:hidden;background:var(--stone);max-width:100%}
+.listing.feature .l-img{aspect-ratio:16/10.5}
+.l-img img{width:100%;height:100%;object-fit:cover;transition:transform .6s ease}
+.listing:hover .l-img img{transform:scale(1.03)}
+.l-row{display:flex;justify-content:space-between;align-items:baseline;gap:1rem}
+.l-row h3{font-size:1.3rem;letter-spacing:-.02em;font-stretch:112%}
+.listing.feature .l-row h3{font-size:1.75rem}
+.l-price{font-weight:600;font-size:1.15rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.l-price small{font-weight:400;color:var(--ink-soft);font-size:.85rem}
+.l-specs{display:flex;flex-wrap:wrap;gap:.25rem 1rem;font-size:.92rem;color:var(--ink-soft)}
+.l-foot{display:flex;justify-content:space-between;align-items:center;gap:1rem;border-top:1px solid var(--rule);padding-top:.8rem;font-size:.9rem}
+.avail{display:inline-flex;align-items:center;gap:.5rem;font-weight:500}
+.avail::before{content:"";width:7px;height:7px;background:var(--open)}
+.avail.low::before{background:#C2741A}
+.avail.none::before{background:var(--rule)}
+.l-foot button{background:none;border:0;padding:0;font-weight:600;cursor:pointer;border-bottom:1.5px solid var(--ink)}
+.l-foot button:hover{color:var(--cobalt);border-color:var(--cobalt)}
+@media (max-width:960px){.l-grid{grid-template-columns:1fr 1fr}.listing.feature{grid-column:1/-1}}
+@media (max-width:600px){.l-grid{grid-template-columns:1fr}}
+
+/* ---------- storage ---------- */
+.storage{margin-top:clamp(5rem,9vw,8rem);background:var(--stone);padding-block:clamp(4rem,8vw,6.5rem)}
+.st-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:clamp(2rem,4vw,4rem);align-items:start}
+.st-intro h2{font-size:clamp(2rem,4vw,3.25rem);margin-bottom:1.25rem}
+.st-intro > p{color:var(--ink-soft);max-width:40ch;margin-bottom:2rem}
+.sizes{border-top:1.5px solid var(--ink)}
+.size{display:grid;grid-template-columns:auto 1fr auto;gap:1rem;align-items:baseline;width:100%;background:none;border:0;border-bottom:1px solid var(--rule);padding:1rem 0;text-align:left;cursor:pointer}
+.size b{font-size:1.15rem;font-stretch:115%;font-weight:600;min-width:5.5ch;font-variant-numeric:tabular-nums}
+.size span{color:var(--ink-soft);font-size:.92rem}
+.size em{font-style:normal;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.size:hover b{color:var(--cobalt)}
+.size[aria-pressed="true"]{box-shadow:inset 3px 0 0 var(--cobalt);padding-left:.9rem}
+.size[aria-pressed="true"] b{color:var(--cobalt)}
+
+.plan-wrap{background:var(--paper);padding:clamp(1.25rem,2.5vw,2rem);min-width:0}
+.plan-head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap;padding-bottom:1rem;border-bottom:1px solid var(--rule);margin-bottom:1.25rem}
+.plan-head select{border:0;border-bottom:1.5px solid var(--ink);background:transparent;font-weight:600;font-size:1.1rem;font-stretch:112%;padding:.2rem 1.5rem .2rem 0;cursor:pointer;max-width:100%}
+.plan-head .count{font-size:.9rem;color:var(--ink-soft)}
+.plan-scroll{overflow-x:auto;padding-bottom:.25rem}
+.plan{min-width:560px;display:flex;flex-direction:column;gap:1.1rem}
+.bl{display:grid;grid-template-columns:28px 1fr;gap:.75rem;align-items:end}
+.bl-tag{font-size:1.3rem;font-weight:700;font-stretch:125%;line-height:1;align-self:center}
+.bl-info{display:flex;justify-content:space-between;font-size:.72rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:.35rem}
+.row{display:flex}
+.unit{flex:1;min-width:0;border:1px solid var(--ink);background:var(--paper);font-size:.62rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);display:flex;align-items:flex-end;justify-content:center;padding:0 0 3px;cursor:pointer;border-radius:0;transition:background .12s,opacity .2s}
+.unit + .unit{border-left:0}
+.unit.s5x5{height:34px}.unit.s5x10{height:46px}.unit.s10x10{height:58px}.unit.s10x20{height:80px}
+.unit.free:hover{background:#DCE3FB}
+.unit.taken{cursor:not-allowed;color:transparent;background:repeating-linear-gradient(135deg,var(--paper) 0 4px,#B9B7B1 4px 5px)}
+.unit.sel{background:var(--cobalt);color:#fff}
+.unit.incart{background:var(--ink);color:#fff}
+.unit.dim{opacity:.25}
+.aisle{margin-left:40px;height:20px;position:relative}
+.aisle::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1.5px dashed var(--rule)}
+.aisle span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--paper);padding:0 .6rem;font-size:.62rem;font-weight:600;letter-spacing:.2em;color:var(--ink-soft)}
+.plan-key{display:flex;gap:1.5rem;flex-wrap:wrap;font-size:.82rem;color:var(--ink-soft);margin-top:1.25rem}
+.plan-key i{display:inline-block;width:14px;height:14px;border:1px solid var(--ink);vertical-align:-2px;margin-right:.45rem}
+.pick{margin-top:1.5rem;border-top:1.5px solid var(--ink);padding-top:1.25rem;display:grid;grid-template-columns:auto 1fr auto auto;gap:1.5rem;align-items:center}
+.pick .id{font-size:2rem;font-weight:600;font-stretch:125%;letter-spacing:-.04em;line-height:1}
+.pick .desc{font-size:.92rem;color:var(--ink-soft);min-width:0}
+.pick .desc b{color:var(--ink);font-weight:600}
+.pick .rate{text-align:right;white-space:nowrap}
+.pick .rate b{font-size:1.5rem;font-weight:600;font-variant-numeric:tabular-nums}
+.pick .rate s{color:var(--ink-soft);margin-right:.3rem}
+.pick .rate small{display:block;font-size:.78rem;color:var(--open);font-weight:600}
+.pick.empty{grid-template-columns:1fr;color:var(--ink-soft)}
+@media (max-width:1000px){.st-grid{grid-template-columns:1fr}}
+@media (max-width:640px){.pick{grid-template-columns:auto 1fr}.pick .rate{text-align:left}.pick .btn{grid-column:1/-1}}
+
+/* ---------- portal ---------- */
+.portal{background:var(--ink);color:#fff;padding-block:clamp(4.5rem,8vw,7rem)}
+.portal .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(2rem,6vw,6rem);align-items:start}
+.portal h2{font-size:clamp(2rem,4vw,3.25rem);margin-bottom:1.5rem}
+.portal .lead{color:rgba(255,255,255,.72);max-width:44ch;font-size:1.05rem}
+.portal-do{margin:2.5rem 0;border-top:1px solid rgba(255,255,255,.2)}
+.portal-do div{display:grid;grid-template-columns:1fr auto;gap:1rem;padding:1rem 0;border-bottom:1px solid rgba(255,255,255,.2)}
+.portal-do span{color:rgba(255,255,255,.6);font-size:.9rem;text-align:right}
+.portal .btns{display:flex;gap:.75rem;flex-wrap:wrap}
+.portal .btn-line{color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.6)}
+.portal .btn-line:hover{background:#fff;color:var(--ink)}
+.ticket{background:var(--paper);color:var(--ink);padding:clamp(1.5rem,3vw,2.25rem)}
+.ticket-head{display:flex;justify-content:space-between;gap:1rem;padding-bottom:1.25rem;border-bottom:1.5px solid var(--ink)}
+.ticket-head h3{font-size:1.5rem;font-stretch:112%;margin-top:.4rem}
+.ticket-head .meta{font-size:.85rem;color:var(--ink-soft);text-align:right;white-space:nowrap}
+.log{list-style:none;margin:0;padding:1.25rem 0 0}
+.log li{display:grid;grid-template-columns:18px 1fr auto;gap:1rem;position:relative;padding-bottom:1.4rem}
+.log li::before{content:"";position:absolute;left:8px;top:18px;bottom:0;border-left:1.5px solid var(--ink)}
+.log li:last-child::before{display:none}
+.log li.todo::before{border-left-style:dashed;border-color:var(--rule)}
+.log .dot{width:18px;height:18px;border:1.5px solid var(--ink);background:var(--ink);margin-top:2px}
+.log li.todo .dot{background:var(--paper);border-color:var(--rule)}
+.log li.now .dot{background:var(--cobalt);border-color:var(--cobalt)}
+.log b{font-weight:600;display:block}
+.log p{font-size:.9rem;color:var(--ink-soft)}
+.log time{font-size:.82rem;color:var(--ink-soft);white-space:nowrap;font-variant-numeric:tabular-nums}
+.log li.todo b{color:var(--ink-soft);font-weight:500}
+.ticket-foot{border-top:1px solid var(--rule);padding-top:1rem;display:flex;justify-content:space-between;gap:1rem;font-size:.85rem;color:var(--ink-soft);flex-wrap:wrap}
+@media (max-width:900px){.portal .wrap{grid-template-columns:1fr}}
+
+/* ---------- properties index ---------- */
+.props{padding-block:clamp(5rem,9vw,8rem)}
+.p-list{border-top:1.5px solid var(--ink)}
+.p-row{display:grid;grid-template-columns:2.2fr 1.6fr 1.3fr 1fr 24px;gap:1.5rem;align-items:center;padding:1.35rem 0;border-bottom:1px solid var(--rule);transition:background .15s, padding .15s}
+.p-row:hover{background:var(--stone);padding-inline:1rem}
+.p-row h3{font-size:clamp(1.25rem,2.2vw,1.75rem);font-stretch:115%;letter-spacing:-.025em}
+.p-row .addr{color:var(--ink-soft);font-size:.95rem}
+.p-row .open{font-weight:600;font-variant-numeric:tabular-nums}
+.p-row .open.none{color:var(--ink-soft);font-weight:500}
+.p-row svg{justify-self:end}
+.p-head{display:grid;grid-template-columns:2.2fr 1.6fr 1.3fr 1fr 24px;gap:1.5rem;padding:.75rem 0;color:var(--ink-soft)}
+@media (max-width:760px){
+  .p-head{display:none}
+  .p-row{grid-template-columns:1fr auto;gap:.25rem 1rem}
+  .p-row .addr,.p-row .type{grid-column:1;font-size:.9rem}
+  .p-row .open{grid-column:2;grid-row:1}
+  .p-row svg{display:none}
+}
+
+/* ---------- contact + footer ---------- */
+.contact{border-top:1px solid var(--rule);padding-block:clamp(3.5rem,7vw,5.5rem)}
+.contact .wrap{display:grid;grid-template-columns:1.4fr 1fr;gap:2rem;align-items:end}
+.contact h2{font-size:clamp(2rem,4.2vw,3.5rem);max-width:16ch}
+.contact .c-side{display:flex;flex-direction:column;gap:1.25rem;align-items:flex-start}
+.contact .phone{font-size:clamp(1.6rem,3vw,2.25rem);font-weight:600;font-stretch:118%;letter-spacing:-.03em;user-select:all}
+@media (max-width:760px){.contact .wrap{grid-template-columns:1fr}}
+footer{background:var(--ink);color:rgba(255,255,255,.65);padding-block:3.5rem 2rem;font-size:.9rem}
+.f-grid{display:grid;grid-template-columns:2fr repeat(3,1fr);gap:2rem}
+.f-grid h4{margin:0 0 1rem;color:#fff;font-size:.72rem;font-weight:600;font-stretch:115%;letter-spacing:.09em;text-transform:uppercase}
+.f-grid ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.f-grid a:hover{color:#fff}
+footer .wordmark b{color:#fff}
+.f-bottom{margin-top:3rem;padding-top:1.25rem;border-top:1px solid rgba(255,255,255,.15);display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;font-size:.8rem}
+@media (max-width:760px){.f-grid{grid-template-columns:1fr 1fr}}
+
+/* ---------- utility bar ---------- */
+.util{background:var(--ink);color:rgba(255,255,255,.7);font-size:.82rem}
+.util .wrap{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-block:.55rem}
+.util .u-l,.util .u-r{display:flex;gap:1.25rem;align-items:center;flex-wrap:wrap}
+.util a,.util button{color:#fff;background:none;border:0;padding:0;cursor:pointer;font-size:.82rem;font-weight:500}
+.util a:hover,.util button:hover{text-decoration:underline}
+.util .u-tag{color:rgba(255,255,255,.55);font-weight:600;font-stretch:115%;letter-spacing:.09em;text-transform:uppercase;font-size:.66rem}
+@media (max-width:760px){.util .u-r{display:none}}
+@media (max-width:420px){.util .u-tag{display:none}.util .u-l{gap:1rem}}
+
+/* ---------- guarantees ---------- */
+.promise{padding-block:clamp(5rem,9vw,8rem) 0}
+.pr-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(1.25rem,2.5vw,2.5rem)}
+.pr{border-top:1.5px solid var(--ink);padding-top:1.25rem;display:flex;flex-direction:column;gap:.7rem}
+.pr b{font-size:clamp(2.6rem,4.6vw,3.9rem);font-weight:600;font-stretch:125%;letter-spacing:-.05em;line-height:.9;font-variant-numeric:tabular-nums}
+.pr h3{font-size:1.1rem;font-stretch:110%;letter-spacing:-.01em;margin-top:.5rem}
+.pr p{color:var(--ink-soft);font-size:.95rem}
+.fine{font-size:.78rem;color:var(--ink-soft);margin-top:2rem}
+@media (max-width:960px){.pr-grid{grid-template-columns:1fr 1fr;row-gap:2.5rem}}
+@media (max-width:540px){.pr-grid{grid-template-columns:1fr}}
+
+/* ---------- reviews ---------- */
+.reviews{padding-block:clamp(5rem,9vw,8rem) 0}
+.rv-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:clamp(1.5rem,3vw,3rem)}
+.rv{display:flex;flex-direction:column;gap:1.5rem;border-top:1px solid var(--rule);padding-top:1.5rem}
+.rv.lead{border-top:1.5px solid var(--ink)}
+.rv blockquote{margin:0;font-size:1.08rem;line-height:1.5}
+.rv.lead blockquote{font-size:clamp(1.35rem,2.4vw,1.9rem);line-height:1.28;letter-spacing:-.015em}
+.rv cite{font-style:normal;font-size:.9rem;margin-top:auto;display:flex;flex-direction:column;gap:.15rem}
+.rv cite b{font-weight:600}
+.rv cite span{color:var(--ink-soft)}
+.rating{display:flex;align-items:baseline;gap:.6rem}
+.rating b{font-size:2rem;font-weight:600;font-stretch:125%;letter-spacing:-.04em}
+@media (max-width:900px){.rv-grid{grid-template-columns:1fr 1fr}.rv.lead{grid-column:1/-1}}
+@media (max-width:600px){.rv-grid{grid-template-columns:1fr}}
+
+/* ---------- criteria + FAQ ---------- */
+.apply{padding-block:0 clamp(5rem,9vw,8rem)}
+.ap-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:clamp(2rem,5vw,5rem);align-items:start}
+.ap-grid h3{font-size:1.5rem;font-stretch:115%;margin-bottom:1rem}
+.ap-grid .sub{color:var(--ink-soft);margin-bottom:1.5rem;max-width:46ch}
+.crit{list-style:none;margin:0;padding:0;border-top:1.5px solid var(--ink)}
+.crit li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:1.5rem;padding:1rem 0;border-bottom:1px solid var(--rule);font-size:.95rem}
+.crit li b{font-weight:600}
+.crit li span{color:var(--ink-soft)}
+.faq{border-top:1.5px solid var(--ink)}
+.faq details{border-bottom:1px solid var(--rule)}
+.faq summary{list-style:none;cursor:pointer;padding:1.1rem 2.5rem 1.1rem 0;font-weight:600;position:relative}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";position:absolute;right:0;top:.85rem;font-size:1.5rem;font-weight:300;line-height:1.2}
+.faq details[open] summary::after{content:"\2212"}
+.faq summary:hover{color:var(--cobalt)}
+.faq details p{padding:0 2.5rem 1.25rem 0;color:var(--ink-soft);max-width:62ch}
+@media (max-width:860px){.ap-grid{grid-template-columns:1fr}}
+
+/* ---------- owners ---------- */
+.owners{background:var(--stone);padding-block:clamp(4rem,8vw,6.5rem)}
+.ow-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:clamp(2rem,5vw,5rem);align-items:start}
+.ow-grid h2{font-size:clamp(2rem,4vw,3.25rem);margin:1rem 0 1.25rem}
+.ow-grid .lead{color:var(--ink-soft);max-width:42ch;margin-bottom:2rem}
+.ow-cta{display:flex;gap:1.25rem;align-items:center;flex-wrap:wrap}
+.ow-list{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+.ow-list div{border-top:1.5px solid var(--ink);padding-top:1rem;display:flex;flex-direction:column;gap:.6rem}
+.ow-list b{font-size:2.25rem;font-weight:600;font-stretch:125%;letter-spacing:-.04em;line-height:1}
+.ow-list h3{font-size:1.05rem;font-stretch:110%;letter-spacing:-.01em}
+.ow-list p{color:var(--ink-soft);font-size:.92rem}
+@media (max-width:960px){.ow-grid{grid-template-columns:1fr}}
+@media (max-width:600px){.ow-list{grid-template-columns:1fr}}
+
+/* ---------- drawer, modal, toast ---------- */
+.scrim{position:fixed;inset:0;background:rgba(21,23,26,.5);z-index:80;opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--paper);z-index:90;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.drawer.open{transform:none}
+.d-head{display:flex;justify-content:space-between;align-items:center;padding:1.5rem;border-bottom:1.5px solid var(--ink)}
+.d-head h3{font-size:1.4rem}
+.close{background:none;border:0;font-weight:600;cursor:pointer;padding:.25rem 0;border-bottom:1.5px solid var(--ink)}
+.d-body{flex:1;overflow:auto;padding:0 1.5rem 1.5rem}
+.li{display:grid;grid-template-columns:1fr auto;gap:.25rem 1rem;padding:1.1rem 0;border-bottom:1px solid var(--rule)}
+.li b{font-size:1.1rem;font-stretch:112%}
+.li .p{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.li small{color:var(--ink-soft);font-size:.85rem}
+.li .rm{grid-column:2;background:none;border:0;padding:0;font-size:.8rem;color:var(--ink-soft);text-decoration:underline;cursor:pointer;justify-self:end}
+.d-field{display:flex;flex-direction:column;gap:.35rem;margin-top:1.25rem}
+.d-field label{font-size:.68rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft)}
+.d-field input[type=date]{border:1px solid var(--rule);padding:.7rem .8rem;border-radius:0}
+.opt{display:flex;gap:.8rem;align-items:flex-start;padding:.9rem 0;border-bottom:1px solid var(--rule);cursor:pointer;font-size:.95rem}
+.opt input{margin-top:.25rem;accent-color:var(--ink)}
+.opt span{flex:1}.opt small{display:block;color:var(--ink-soft);font-size:.82rem}
+.d-foot{border-top:1.5px solid var(--ink);padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:.4rem}
+.sum{display:flex;justify-content:space-between;font-size:.92rem;font-variant-numeric:tabular-nums}
+.sum.total{font-size:1.25rem;font-weight:600;font-stretch:112%;margin-top:.4rem}
+.sum.after{color:var(--ink-soft)}
+.d-foot .btn{margin-top:.75rem;width:100%}
+.d-empty{padding:3rem 0;color:var(--ink-soft);display:flex;flex-direction:column;gap:1.25rem;align-items:flex-start}
+.d-done{padding:2.5rem 0;display:flex;flex-direction:column;gap:1rem;align-items:flex-start}
+.d-done .ref{font-size:2rem;font-weight:600;font-stretch:125%;letter-spacing:-.04em}
+
+.modal{position:fixed;inset:0;z-index:95;display:grid;place-items:center;padding:1rem}
+[hidden]{display:none!important}
+.m-card{position:relative;z-index:1;background:var(--paper);width:min(440px,100%);padding:2rem;display:flex;flex-direction:column;gap:1.1rem}
+.m-card .close{position:absolute;top:1.5rem;right:1.5rem}
+.m-card h3{font-size:1.75rem}
+.m-card label{display:block;font-size:.68rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:.35rem}
+.m-card input,.m-card select,.m-card textarea{width:100%;border:0;border-bottom:1.5px solid var(--ink);padding:.6rem 0;background:transparent;outline:none;border-radius:0}
+.m-card textarea{resize:vertical;min-height:80px}
+.m-card .note{font-size:.82rem;color:var(--ink-soft)}
+
+.toast{position:fixed;left:var(--gl);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ink);color:#fff;padding:1rem 1.25rem;z-index:100;display:flex;gap:1rem;align-items:center;transform:translateY(20px);opacity:0;pointer-events:none;transition:all .25s;max-width:calc(100% - 48px);font-size:.92rem}
+.toast.show{opacity:1;transform:none;pointer-events:auto}
+.toast button{background:none;border:0;color:#fff;font-weight:600;border-bottom:1.5px solid #fff;padding:0;cursor:pointer;white-space:nowrap}
+.concept{font-size:.75rem;color:var(--ink-soft);text-align:center;padding-block:1rem}
+
+/* ================= motion layer ================= */
+section{scroll-margin-top:72px}
+html{scroll-padding-top:72px}
+
+/* buttons: colour sweep on hover, press on click, ripple from the pointer */
+.btn{position:relative;overflow:hidden;isolation:isolate;--sweep:var(--cobalt);transition:color .3s ease, transform .15s ease, box-shadow .3s ease}
+.btn::before{content:"";position:absolute;inset:0;background:var(--sweep);transform:translateY(101%);transition:transform .38s cubic-bezier(.2,.75,.2,1);z-index:-1}
+.btn:hover::before{transform:none}
+.btn:active{transform:scale(.965)}
+.btn-ink:hover{background:var(--ink)}
+.btn-cobalt{--sweep:var(--ink)}.btn-cobalt:hover{background:var(--cobalt)}
+.btn-line{--sweep:var(--ink)}.btn-line:hover{background:transparent;color:#fff}
+.portal .btn-line{--sweep:#fff}.portal .btn-line:hover{background:transparent;color:var(--ink)}
+.portal .btn-cobalt{--sweep:#fff}.portal .btn-cobalt:hover{color:var(--ink)}
+.btn .ar{display:inline-block;transition:transform .3s cubic-bezier(.2,.75,.2,1)}
+.btn:hover .ar{transform:translateX(5px)}
+.ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.28;transform:scale(0);pointer-events:none;z-index:-1;animation:ripple .6s ease-out forwards}
+@keyframes ripple{to{transform:scale(1);opacity:0}}
+
+/* text links: arrow nudges, underline redraws */
+.arrow-link .ar{display:inline-block;transition:transform .3s cubic-bezier(.2,.75,.2,1)}
+.arrow-link:hover .ar,.pf:hover .arrow-link .ar{transform:translateX(6px)}
+.l-foot button,.h-right .link,.util button{background-image:linear-gradient(currentColor,currentColor);background-repeat:no-repeat;background-position:0 100%;background-size:100% 1.5px;transition:background-size .3s ease,color .2s}
+.l-foot button{border-bottom:0!important;padding-bottom:2px!important}
+.l-foot button:hover{animation:redraw .45s ease}
+@keyframes redraw{0%{background-size:100% 1.5px;background-position:100% 100%}49%{background-size:0 1.5px;background-position:100% 100%}50%{background-position:0 100%}100%{background-size:100% 1.5px;background-position:0 100%}}
+.h-right .link,.util button{background-size:0 1.5px}
+.h-right .link:hover,.util button:hover{background-size:100% 1.5px;text-decoration:none}
+
+/* small controls press in */
+.tabs button,.size,.l-foot button,.h-right .link,.unit.free,.faq summary,.p-row,.close{transition:transform .12s ease, color .2s, background .2s, box-shadow .2s, padding .15s}
+.tabs button:active,.size:active,.l-foot button:active,.h-right .link:active,.close:active{transform:scale(.95)}
+.unit.free:active{transform:scale(.9)}
+.tabs{position:relative}
+
+/* storage plan feedback */
+.unit.sel,.unit.incart{position:relative;z-index:1;animation:pop .38s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.22)}100%{transform:scale(1)}}
+.pick:not(.empty){animation:enter .4s cubic-bezier(.2,.75,.2,1)}
+.flyer{position:fixed;z-index:120;width:22px;height:22px;background:var(--cobalt);pointer-events:none;left:0;top:0}
+.bump{animation:bump .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+#cartBtn{display:inline-block}
+
+/* lists re-entering after a filter or a new request */
+.enter{animation:enter .5s cubic-bezier(.2,.75,.2,1) both}
+@keyframes enter{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.faq details[open] p{animation:enter .35s ease}
+.log li{animation:enter .45s cubic-bezier(.2,.75,.2,1) both}
+.log li:nth-child(2){animation-delay:.08s}.log li:nth-child(3){animation-delay:.16s}.log li:nth-child(4){animation-delay:.24s}
+
+/* scroll: progress line, compact header, active nav link */
+.progress{position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--cobalt);transform-origin:0 50%;transform:scaleX(0);pointer-events:none}
+header .wrap{transition:height .25s ease}
+header.compact .wrap{height:58px}
+header.compact{box-shadow:0 10px 30px -22px rgba(0,0,0,.45)}
+nav.main a.on{border-color:var(--ink)}
+
+/* scroll: reveal on entry */
+.motion .reveal{opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.2,.75,.2,1),transform .8s cubic-bezier(.2,.75,.2,1);transition-delay:var(--d,0s)}
+.motion .reveal.in{opacity:1;transform:none}
+
+/* hero parallax */
+.hero-img img{position:absolute;left:0;top:-12%;height:124%;will-change:transform}
+.hero-copy{will-change:opacity,transform}
+
+/* back to top */
+.to-top{position:fixed;right:calc(var(--gr) + env(safe-area-inset-right,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:70;width:52px;height:52px;border:0;background:var(--ink);color:#fff;cursor:pointer;display:grid;place-items:center;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .3s,transform .3s,background .2s;overflow:hidden}
+.to-top.show{opacity:1;transform:none;pointer-events:auto}
+.to-top:hover{background:var(--cobalt)}
+.to-top:hover svg{animation:nudge .5s ease}
+@keyframes nudge{0%{transform:none}45%{transform:translateY(-18px);opacity:0}46%{transform:translateY(18px);opacity:0}100%{transform:none;opacity:1}}
+.to-top svg{position:relative}
+.to-top .ring{position:absolute;inset:0}
+
+@media (prefers-reduced-motion:reduce){
+  .motion .reveal{opacity:1;transform:none}
+  .btn::before,.ripple,.flyer{display:none}
+  .unit.sel,.unit.incart,.enter,.log li,.pick,.bump{animation:none}
+}
+
+/* ================= mobile & touch ================= */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{-webkit-tap-highlight-color:transparent}
+button,a,select,summary,.unit{touch-action:manipulation}
+.hero-img{height:clamp(440px,68vh,680px);height:clamp(440px,68svh,680px)}
+.swipe-hint{display:none;font-size:.8rem;color:var(--ink-soft);margin:0 0 .6rem}
+.plan-scroll{-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+
+/* hover effects only on devices that can hover, so taps don't leave them stuck on */
+@media (hover:none){
+  .btn:hover::before{transform:translateY(101%)}
+  .btn-line:hover{color:var(--ink)}
+  .portal .btn-line:hover{color:#fff}
+  .portal .btn-cobalt:hover{color:#fff}
+  .btn:hover .ar,.arrow-link:hover .ar,.pf:hover .arrow-link .ar{transform:none}
+  .pf:hover .pf-img img,.listing:hover .l-img img{transform:none}
+  .p-row:hover{background:transparent;padding-inline:0}
+  .l-foot button:hover{animation:none}
+  .unit.free:hover{background:var(--paper)}
+  .to-top:hover{background:var(--ink)}
+  .to-top:hover svg{animation:none}
+  .btn:active::before{transform:none;transition-duration:.15s}
+}
+
+@media (max-width:760px){
+  /* touch targets of at least 44px */
+  .util .wrap{padding-block:0}
+  .util .u-l{gap:0 1.1rem}
+  .util button{min-height:40px;padding-block:.6rem}
+  .h-right .link{min-height:44px;padding-inline:.25rem}
+  .menu-toggle{min-height:44px;padding-inline:.25rem}
+  .seg{padding-block:.6rem}
+  .seg select{min-height:36px}
+  .tabs button{min-height:44px}
+  .l-foot{min-height:44px}
+  .l-foot button{min-height:36px}
+  .arrow-link{padding-block:.6rem 2px}
+  .plan-head select{min-height:44px}
+  .size{min-height:52px}
+  .faq summary{min-height:52px}
+  .ow-cta .link{min-height:44px}
+
+  .swipe-hint{display:block}
+  .unit{scroll-snap-align:start}
+  .sec-top{gap:1rem}
+  .to-top{width:46px;height:46px}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px));left:var(--gl);right:var(--gr);max-width:none}
+
+  /* request log: time drops under the step so text keeps its width */
+  .log li{grid-template-columns:18px 1fr;row-gap:.15rem}
+  .log time{grid-column:2;grid-row:1;justify-self:start;font-size:.78rem}
+  .log li > div{grid-column:2}
+  .log time + div, .log li > div{grid-row:2}
+  .log .dot{grid-column:1;grid-row:1 / span 2}
+  .ticket-head{flex-direction:column;gap:.5rem}
+  .ticket-head .meta{text-align:left}
+
+  .portal-do div{grid-template-columns:1fr}
+  .portal-do span{text-align:left}
+  .crit li{grid-template-columns:1fr;gap:.2rem}
+  .contact .phone{font-size:1.75rem}
+}
+
+@media (max-width:380px){
+  .hero h1{font-size:2.35rem}
+  .portal .btns .btn{flex:1 1 100%}
+  .pick .id{font-size:1.6rem}
+}
+
+/* phones held sideways: keep the hero from filling the whole screen */
+@media (max-height:500px) and (orientation:landscape){
+  .hero-img{height:clamp(320px,90svh,440px)}
+  .hero h1{font-size:2.4rem}
+  .hero-copy{padding-bottom:4.5rem}
+}
+</style>
+</head>
+<body>
+
+<div class="util">
+  <div class="wrap">
+    <div class="u-l"><span class="u-tag">Residents</span><button type="button" data-login>Pay rent</button><button type="button" data-req>Repair request</button><button type="button" data-login>Sign in</button></div>
+    <div class="u-r"><span>Leasing (555) 010-2400</span><span>Emergency maintenance, 24 hours</span></div>
+  </div>
+</div>
+
+<header id="siteHeader">
+  <div class="progress" id="progress"></div>
+  <div class="wrap">
+    <a class="wordmark" href="#top" aria-label="ADR Property Management home"><b>ADR</b><span>Property<br>Management</span></a>
+    <nav class="main" id="nav" aria-label="Main">
+      <a href="#homes" data-tab="apartment">Apartments</a>
+      <a href="#storage">Storage</a>
+      <a href="#homes" data-tab="retail">Retail space</a>
+      <a href="#properties">Properties</a>
+      <a href="#residents">Residents</a>
+      <a href="#owners">Owners</a>
+    </nav>
+    <div class="h-right">
+      <button class="link hide-sm" type="button" data-login>Sign in</button>
+      <button class="link" type="button" id="cartBtn">Cart (<span id="cartN" class="tnum">0</span>)</button>
+      <a class="btn btn-ink hide-sm" href="#storage">Reserve storage</a>
+      <button class="menu-toggle" id="menuBtn" type="button" aria-expanded="false">Menu</button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="hero-img">
+    <img src="https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=1600&q=75&auto=format&fit=crop" srcset="https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=640&q=70&auto=format&fit=crop 640w, https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=1000&q=72&auto=format&fit=crop 1000w, https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=1600&q=75&auto=format&fit=crop 1600w, https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=2200&q=75&auto=format&fit=crop 2200w" sizes="100vw" fetchpriority="high" width="2200" height="1467" alt="Four-storey brick apartment building with balconies in late afternoon sun">
+    <div class="hero-copy">
+      <div class="wrap">
+        <h1>Places to live, store and open shop.</h1>
+        <div class="hero-meta">
+          <p>Apartments, self storage and retail suites across nine properties, all managed by ADR. See what's open today and what it costs.</p>
+          <span class="caption">Riverside Lofts, 410 River St</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="search">
+    <div class="wrap">
+      <form class="search-bar" id="searchForm" role="search">
+        <div class="seg type"><label for="sType">I'm looking for</label>
+          <select id="sType"><option value="apartment">An apartment</option><option value="storage">A storage unit</option><option value="retail">Retail space</option></select></div>
+        <div class="seg"><label for="s1" id="l1">Property</label><select id="s1"></select></div>
+        <div class="seg"><label for="s2" id="l2">Bedrooms</label><select id="s2"></select></div>
+        <div class="seg"><label for="s3" id="l3">Max rent</label><select id="s3"></select></div>
+        <button class="btn btn-cobalt" type="submit" id="sGo">Search 38 homes</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section class="intro">
+  <div class="wrap">
+    <span class="label soft">About ADR</span>
+    <p class="big">We manage <strong>214 apartments</strong>, <strong>438 storage units</strong> and <strong>53 retail suites</strong>. Every listing on this site shows live availability and the full price, and storage can be reserved online without calling anyone.</p>
+  </div>
+</section>
+
+<section class="portfolio" aria-label="What we rent">
+  <div class="wrap">
+    <a class="pf" href="#homes" data-tab="apartment">
+      <div class="pf-img"><img loading="lazy" src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=75&auto=format&fit=crop" alt="Bright apartment living room with large windows"></div>
+      <div class="pf-num"><b class="tnum">214</b><span>Apartments</span></div>
+      <p>Studios to three-bedroom townhomes at four properties. Floor plans, photos and move-in dates for every unit.</p>
+      <span class="arrow-link">Browse apartments →</span>
+    </a>
+    <a class="pf" href="#storage">
+      <div class="pf-img" style="background:#E3E1DB">
+        <svg class="doors" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" aria-label="Drawing of a row of roll-up storage doors" role="img">
+          <rect width="400" height="500" fill="#E3E1DB"/>
+          <rect x="0" y="120" width="400" height="300" fill="#FFFFFF"/>
+          <rect x="0" y="100" width="400" height="22" fill="#15171A"/>
+          <g id="dr">
+            <rect x="22" y="160" width="104" height="260" fill="#F4F3F0" stroke="#15171A" stroke-width="2"/>
+          </g>
+          <g stroke="#15171A" stroke-width="1" opacity=".55">
+            <path d="M22 180h104M22 200h104M22 220h104M22 240h104M22 260h104M22 280h104M22 300h104M22 320h104M22 340h104M22 360h104M22 380h104M22 400h104"/>
+            <path d="M148 180h104M148 200h104M148 220h104M148 240h104M148 260h104M148 280h104M148 300h104M148 320h104M148 340h104M148 360h104M148 380h104M148 400h104"/>
+            <path d="M274 180h104M274 200h104M274 220h104M274 240h104M274 260h104M274 280h104M274 300h104M274 320h104M274 340h104M274 360h104M274 380h104M274 400h104"/>
+          </g>
+          <rect x="148" y="160" width="104" height="260" fill="#2747D6" fill-opacity=".9" stroke="#15171A" stroke-width="2"/>
+          <g stroke="#FFFFFF" stroke-width="1" opacity=".5"><path d="M148 180h104M148 200h104M148 220h104M148 240h104M148 260h104M148 280h104M148 300h104M148 320h104M148 340h104M148 360h104M148 380h104M148 400h104"/></g>
+          <rect x="274" y="160" width="104" height="260" fill="none" stroke="#15171A" stroke-width="2"/>
+          <rect x="22" y="160" width="104" height="260" fill="none" stroke="#15171A" stroke-width="2"/>
+          <g font-family="Archivo, Arial, sans-serif" font-weight="700" font-size="20" fill="#15171A" text-anchor="middle">
+            <text x="74" y="148">B06</text><text x="200" y="148" fill="#2747D6">B07</text><text x="326" y="148">B08</text>
+          </g>
+          <rect x="190" y="402" width="20" height="8" fill="#FFFFFF"/>
+          <rect x="0" y="420" width="400" height="80" fill="#C9C6BF"/>
+          <path d="M0 460h400" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="26 18"/>
+        </svg>
+      </div>
+      <div class="pf-num"><b class="tnum">438</b><span>Storage units</span></div>
+      <p>Lockers to 10′ × 20′ drive-up units at three facilities. Pick the exact unit on the site plan and reserve it online.</p>
+      <span class="arrow-link">Reserve a unit →</span>
+    </a>
+    <a class="pf" href="#homes" data-tab="retail">
+      <div class="pf-img"><img loading="lazy" src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=900&q=75&auto=format&fit=crop" alt="Clothing boutique interior with wooden shelving"></div>
+      <div class="pf-num"><b class="tnum">53</b><span>Retail suites</span></div>
+      <p>Storefronts and flex suites from 900 to 4,200 sq ft on Commerce Row, Market Street and Parkview Plaza.</p>
+      <span class="arrow-link">See retail space →</span>
+    </a>
+  </div>
+</section>
+
+<section class="promise" id="promises">
+  <div class="wrap">
+    <div class="sec-top">
+      <h2>Promises we put in writing</h2>
+      <span class="soft">Part of every lease and storage agreement.</span>
+    </div>
+    <div class="pr-grid">
+      <div class="pr"><b>24 hrs</b><h3>A reply on every request</h3><p>A person answers every maintenance request or question within 24 hours. No heat, active leaks and lockouts are answered around the clock.</p></div>
+      <div class="pr"><b>$0</b><h3>To hold a storage unit</h3><p>Reserve any open unit online with no deposit. Your card isn't charged until move-in day, and you can cancel before then for free.</p></div>
+      <div class="pr"><b>100%</b><h3>Of costs shown up front</h3><p>Rent, admin fees, pet fees and utilities are listed on every unit before you apply. The price you see is the price on your lease.</p></div>
+      <div class="pr"><b>Day 1</b><h3>Move-in ready, or a week free</h3><p>If your apartment isn't cleaned, painted and working on move-in day, your first week's rent is on us.</p></div>
+    </div>
+    <p class="fine">Full terms are in each lease and rental agreement.</p>
+  </div>
+</section>
+
+<section class="listings" id="homes">
+  <div class="wrap">
+    <div class="sec-top">
+      <h2>Open this month</h2>
+      <div class="tabs" role="group" aria-label="Filter listings">
+        <button type="button" data-f="all" aria-pressed="true">All</button>
+        <button type="button" data-f="apartment" aria-pressed="false">Apartments</button>
+        <button type="button" data-f="retail" aria-pressed="false">Retail</button>
+      </div>
+    </div>
+    <div class="l-grid" id="lGrid"></div>
+    <p style="margin-top:3rem"><a class="arrow-link" href="#apply">Applying? Read the criteria first →</a></p>
+  </div>
+</section>
+
+<section class="storage" id="storage">
+  <div class="wrap st-grid">
+    <div class="st-intro">
+      <span class="label soft">Self storage</span>
+      <h2 style="margin-top:1rem">Pick your unit off the plan.</h2>
+      <p>White units are open. Choose a size, tap the unit you want, and add it to your cart. Nothing is charged until move-in day.</p>
+      <div class="sizes" id="sizes">
+        <button class="size" type="button" data-s="5x5" aria-pressed="false"><b>5 × 5</b><span>Boxes, a bike, seasonal gear</span><em>$39</em></button>
+        <button class="size" type="button" data-s="5x10" aria-pressed="false"><b>5 × 10</b><span>A studio apartment</span><em>$59</em></button>
+        <button class="size" type="button" data-s="10x10" aria-pressed="false"><b>10 × 10</b><span>A one-bedroom apartment</span><em>$95</em></button>
+        <button class="size" type="button" data-s="10x20" aria-pressed="false"><b>10 × 20</b><span>A family home, or a car</span><em>$165</em></button>
+      </div>
+    </div>
+
+    <div class="plan-wrap">
+      <div class="plan-head">
+        <select id="facility" aria-label="Storage facility">
+          <option value="north">Northgate Storage, 1840 Industrial Way</option>
+          <option value="east">Eastside Storage, 92 Commerce Row</option>
+          <option value="river">Riverside Storage, 410 River St</option>
+        </select>
+        <span class="count" id="openCount"></span>
+      </div>
+      <p class="swipe-hint" aria-hidden="true">Swipe the plan to see every unit →</p>
+      <div class="plan-scroll" id="planScroll"><div class="plan" id="plan"></div></div>
+      <div class="plan-key">
+        <span><i></i>Open</span>
+        <span><i style="background:repeating-linear-gradient(135deg,#fff 0 3px,#B9B7B1 3px 4px)"></i>Rented</span>
+        <span><i style="background:var(--cobalt);border-color:var(--cobalt)"></i>Selected</span>
+        <span><i style="background:var(--ink)"></i>In your cart</span>
+      </div>
+      <div class="pick empty" id="pick"></div>
+    </div>
+  </div>
+</section>
+
+<section class="portal" id="residents">
+  <div class="wrap">
+    <div>
+      <span class="label" style="color:rgba(255,255,255,.6)">For residents and tenants</span>
+      <h2 style="margin-top:1rem">Report a problem, then watch it get fixed.</h2>
+      <p class="lead">Your ADR account covers your apartment, storage unit or shop. Send a request with photos and follow every step until it's closed.</p>
+      <div class="portal-do">
+        <div><b>Maintenance and questions</b><span>Reply within 24 hrs</span></div>
+        <div><b>Rent, storage and CAM payments</b><span>Autopay available</span></div>
+        <div><b>Lease, gate code and documents</b><span>Always on file</span></div>
+      </div>
+      <div class="btns">
+        <button class="btn btn-cobalt" type="button" data-login>Sign in</button>
+        <button class="btn btn-line" type="button" id="newReq">Submit a request</button>
+      </div>
+    </div>
+
+    <article class="ticket" aria-label="Example maintenance request">
+      <div class="ticket-head">
+        <div><span class="label soft">Request 20417</span><h3 id="tTitle">AC blowing warm air</h3></div>
+        <div class="meta" id="tMeta">Apt 3C<br>Riverside Lofts</div>
+      </div>
+      <ol class="log" id="log">
+        <li><span class="dot"></span><div><b>Submitted</b><p>"Unit runs but air is warm. Two photos attached."</p></div><time>Nov 8, 9:14 am</time></li>
+        <li><span class="dot"></span><div><b>Assigned to Marcus R.</b><p>HVAC technician, ADR maintenance</p></div><time>Nov 8, 10:02 am</time></li>
+        <li class="now"><span class="dot"></span><div><b>Visit scheduled</b><p>Thursday, 10 am to 12 pm. You'll get a text when he's on the way.</p></div><time>Nov 13</time></li>
+        <li class="todo"><span class="dot"></span><div><b>Resolved</b><p>You'll be asked to confirm the fix.</p></div><time>Pending</time></li>
+      </ol>
+      <div class="ticket-foot"><span>What every request looks like in your portal</span><span>Example</span></div>
+    </article>
+  </div>
+</section>
+
+<section class="reviews" id="reviews">
+  <div class="wrap">
+    <div class="sec-top">
+      <h2>From the people who rent from us</h2>
+      <div class="rating"><b>4.8</b><span class="soft">average from 412 Google reviews</span></div>
+    </div>
+    <div class="rv-grid">
+      <figure class="rv lead" style="margin:0">
+        <blockquote>"I reserved a 10 × 10 on my phone at 11 pm and picked the exact unit I wanted. The gate code was in my account the next morning. I never had to call anyone."</blockquote>
+        <cite><b>Priya S.</b><span>Storage customer, Northgate</span></cite>
+      </figure>
+      <figure class="rv" style="margin:0">
+        <blockquote>"Our AC died in July. The portal showed a technician assigned within the hour, and it was fixed that afternoon."</blockquote>
+        <cite><b>Daniel and Jen T.</b><span>Residents, Riverside Lofts</span></cite>
+      </figure>
+      <figure class="rv" style="margin:0">
+        <blockquote>"Moving our bakery to Commerce Row was easy. Every number in the lease matched the listing."</blockquote>
+        <cite><b>Alma R.</b><span>Rise Bakery, Commerce Row</span></cite>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="props" id="properties">
+  <div class="wrap">
+    <div class="sec-top">
+      <h2>Nine properties</h2>
+      <span class="soft">Open units update as leases and reservations come in.</span>
+    </div>
+    <div class="p-head label"><span>Property</span><span>Address</span><span>Type</span><span>Open now</span><span></span></div>
+    <div class="p-list" id="pList"></div>
+  </div>
+</section>
+
+<section class="apply" id="apply">
+  <div class="wrap">
+    <div class="sec-top">
+      <h2>Before you apply</h2>
+      <span class="soft">What we look for, and answers to what people ask most.</span>
+    </div>
+    <div class="ap-grid">
+      <div>
+        <h3>Application criteria</h3>
+        <p class="sub">For apartments. Every adult on the lease applies separately, and most decisions come back within two business days.</p>
+        <ul class="crit">
+          <li><b>Income</b><span>Household income of 2.5 times the monthly rent</span></li>
+          <li><b>Credit and background</b><span>Checked for every adult 18 and over</span></li>
+          <li><b>Rental history</b><span>Two years of positive references, or a co-signer</span></li>
+          <li><b>Application fee</b><span>$45 per adult, non-refundable</span></li>
+          <li><b>Holding deposit</b><span>$300, credited to your first month</span></li>
+          <li><b>Pets</b><span>Up to two. $300 pet deposit and $35 a month per pet</span></li>
+          <li><b>Retail tenants</b><span>Business plan and two years of financials</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Questions</h3>
+        <p class="sub">Still unsure? Call the leasing office at (555) 010-2400.</p>
+        <div class="faq">
+          <details open><summary>How do I reserve a storage unit?</summary><p>Pick a unit on the storage plan, add it to your cart and choose a move-in date. Your gate code and rental agreement appear in your ADR account. Nothing is charged until move-in day.</p></details>
+          <details><summary>Can I tour an apartment before applying?</summary><p>Yes. Book a tour from any listing and we'll confirm a time by text the same day. Self-guided tours are available at The Foundry and Riverside Lofts.</p></details>
+          <details><summary>How fast are repairs handled?</summary><p>You get a reply within 24 hours and can follow each step in the portal. Emergencies such as no heat, active leaks or lockouts are answered at any hour.</p></details>
+          <details><summary>Can I switch to a bigger or smaller storage unit?</summary><p>Yes. Move to any open unit at the same facility with no new admin fee. Request the switch from your account.</p></details>
+          <details><summary>What do retail lease rates include?</summary><p>Each listing says whether it is NNN, where you also pay a share of taxes, insurance and common-area costs, or modified gross, where some of those are included. The estimated monthly total is on every listing.</p></details>
+          <details><summary>How do I pay rent?</summary><p>Pay online by bank transfer or card, set up autopay, or drop a check at the leasing office. Storage and retail charges are paid from the same account.</p></details>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="owners" id="owners">
+  <div class="wrap ow-grid">
+    <div>
+      <span class="label soft">For property owners</span>
+      <h2>Own a building? Let ADR run it.</h2>
+      <p class="lead">Your property gets the same systems as ours: online listings, storage reservations, a resident portal and an in-house maintenance team.</p>
+      <div class="ow-cta">
+        <a class="btn btn-ink" href="#contact">Request a management proposal</a>
+        <button class="link" type="button" data-login style="background:none;border:0;padding:0;font-weight:600;border-bottom:1.5px solid var(--ink);cursor:pointer">Owner sign in</button>
+      </div>
+    </div>
+    <div class="ow-list">
+      <div><b class="tnum">96%</b><h3>Leasing and screening</h3><p>Average occupancy across our buildings. We list vacancies here, run showings and screen every applicant.</p></div>
+      <div><b class="tnum">24 hrs</b><h3>Maintenance</h3><p>In-house technicians plus licensed vendors. Every request is logged and visible to you.</p></div>
+      <div><b class="tnum">10th</b><h3>Monthly statements</h3><p>Rent roll, expenses and occupancy in your owner account by the 10th of each month.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="contact" id="contact">
+  <div class="wrap">
+    <h2>Rather talk it through? Call the leasing office.</h2>
+    <div class="c-side">
+      <span class="phone">(555) 010-2400</span>
+      <span class="soft">Monday to Saturday, 9 am to 6 pm. Emergency maintenance line open around the clock.</span>
+      <a class="btn btn-ink" href="#homes">Book a tour</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="f-grid">
+      <div><span class="wordmark"><b>ADR</b></span><p style="margin-top:1rem;max-width:30ch">Apartments, self storage and retail space, managed by one local team.</p></div>
+      <div><h4>Rent</h4><ul><li><a href="#homes">Apartments</a></li><li><a href="#storage">Storage</a></li><li><a href="#homes">Retail space</a></li><li><a href="#properties">All properties</a></li></ul></div>
+      <div><h4>Residents</h4><ul><li><a href="#residents">Sign in</a></li><li><a href="#residents">Pay rent</a></li><li><a href="#residents">Maintenance</a></li><li><a href="#residents">Move-out notice</a></li></ul></div>
+      <div><h4>Office</h4><ul><li>(555) 010-2400</li><li>leasing@adrproperty.com</li><li>Mon–Sat, 9–6</li></ul></div>
+    </div>
+    <div class="f-bottom"><span>© 2026 ADR Property Management</span><span>Equal Housing Opportunity</span></div>
+  </div>
+</footer>
+<p class="concept">Design concept. Listings, prices, reviews and figures are samples.</p>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Storage cart" aria-hidden="true">
+  <div class="d-head"><h3>Storage cart</h3><button class="close" type="button" id="closeCart">Close</button></div>
+  <div class="d-body" id="dBody"></div>
+  <div class="d-foot" id="dFoot"></div>
+</aside>
+
+<div class="modal" id="loginModal" hidden>
+  <div class="scrim open" data-close></div>
+  <form class="m-card" id="loginForm">
+    <button class="close" type="button" data-close>Close</button>
+    <span class="label soft">ADR account</span>
+    <h3>Sign in</h3>
+    <div><label for="lEmail">Email</label><input id="lEmail" type="email" autocomplete="off"></div>
+    <div><label for="lPass">Password</label><input id="lPass" type="password" autocomplete="off"></div>
+    <button class="btn btn-ink" type="submit">Sign in</button>
+    <p class="note">Your account is created when you sign a lease or reserve storage. This is a design preview, so nothing is checked.</p>
+  </form>
+</div>
+
+<div class="modal" id="reqModal" hidden>
+  <div class="scrim open" data-close></div>
+  <form class="m-card" id="reqForm">
+    <button class="close" type="button" data-close>Close</button>
+    <span class="label soft">New request</span>
+    <h3>What needs attention?</h3>
+    <div><label for="rUnit">Unit</label><select id="rUnit"><option>Apt 3C, Riverside Lofts</option><option>Storage N-B07, Northgate</option></select></div>
+    <div><label for="rCat">Category</label><select id="rCat"><option>Plumbing</option><option>Heating and cooling</option><option>Appliance</option><option>Storage door or lock</option><option>Billing question</option></select></div>
+    <div><label for="rMsg">Details</label><textarea id="rMsg">Kitchen faucet drips even when fully closed.</textarea></div>
+    <button class="btn btn-cobalt" type="submit">Send request</button>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status"><span id="toastMsg"></span><button type="button" id="toastBtn" hidden>View cart</button></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const money=n=>'$'+n.toLocaleString('en-US');
+const pic=(id,w=1000)=>`https://images.unsplash.com/photo-${id}?w=${w}&q=75&auto=format&fit=crop`;
+const srcset=id=>[480,800,1200,1600].map(w=>`${pic(id,w)} ${w}w`).join(', ');
+
+/* search */
+const S={
+  apartment:{l:['Property','Bedrooms','Max rent'],o:[['Any property','Riverside Lofts','Maple Court','The Foundry','Parkview Residences'],['Any','Studio','1 bedroom','2 bedrooms','3 bedrooms'],['No limit','$1,200','$1,500','$1,800','$2,200']],go:'Search 38 homes'},
+  storage:{l:['Facility','Unit size','Move in'],o:[['Northgate Storage','Eastside Storage','Riverside Storage'],['Any size','5 × 5','5 × 10','10 × 10','10 × 20'],['This week','Next week','Later this month','Just looking']],go:'See 112 open units'},
+  retail:{l:['Corridor','Size','Use'],o:[['Any corridor','Commerce Row','Market Street','Parkview Plaza'],['Any size','Under 1,500 sq ft','1,500–3,000 sq ft','3,000+ sq ft'],['Any use','Retail','Restaurant','Office or flex']],go:'Search 6 suites'}
+};
+function fillSearch(){
+  const t=S[$('#sType').value];
+  [1,2,3].forEach(i=>{$('#l'+i).textContent=t.l[i-1];$('#s'+i).innerHTML=t.o[i-1].map(o=>`<option>${o}</option>`).join('')});
+  $('#sGo').textContent=t.go;
+}
+$('#sType').addEventListener('change',fillSearch); fillSearch();
+$('#searchForm').addEventListener('submit',e=>{
+  e.preventDefault(); const t=$('#sType').value;
+  if(t==='storage'){ $('#facility').selectedIndex=$('#s1').selectedIndex; build(); const z=['all','5x5','5x10','10x10','10x20'][$('#s2').selectedIndex]; setSize(z); $('#storage').scrollIntoView(); }
+  else { setFilter(t); $('#homes').scrollIntoView(); }
+});
+
+/* listings */
+const L=[
+  {t:'apartment',f:1,name:'Riverside Lofts',unit:'Unit 4B',img:'1502672260266-1c1ef2d93688',specs:['2 bed','2 bath','1,040 sq ft','In-unit laundry'],price:1685,per:'/mo',av:'3 units open',c:''},
+  {t:'apartment',name:'Maple Court',unit:'Townhome 12',img:'1567496898669-ee935f5f647a',specs:['3 bed','2.5 bath','1,420 sq ft','Garage'],price:2150,per:'/mo',av:'Last one',c:'low'},
+  {t:'retail',name:'Commerce Row',unit:'Suite 104',img:'1497366216548-37526070297c',specs:['1,800 sq ft','Corner frontage','NNN'],price:24,per:'/sq ft/yr',av:'From Jan 1',c:''},
+  {t:'apartment',name:'The Foundry',unit:'Studio 210',img:'1522708323590-d24dbb6b0267',specs:['Studio','1 bath','520 sq ft','Pets allowed'],price:1095,per:'/mo',av:'5 units open',c:''},
+  {t:'apartment',name:'Parkview Residences',unit:'Unit 7A',img:'1493809842364-78817add7ffb',specs:['1 bed','1 bath','710 sq ft','Balcony'],price:1345,per:'/mo',av:'Waitlist',c:'none'},
+  {t:'retail',name:'Market Street',unit:'Suite B',img:'1604719312566-8912e9227c6a',specs:['2,400 sq ft','Rear loading','Modified gross'],price:28,per:'/sq ft/yr',av:'By appointment',c:'low'}
+];
+let filt='all';
+function renderL(){
+  const rows=L.filter(l=>filt==='all'||l.t===filt);
+  $('#lGrid').innerHTML=rows.map((l,i)=>`
+    <article class="listing ${filt==='all'&&l.f?'feature':''}">
+      <div class="l-img"><img loading="lazy" decoding="async" src="${pic(l.img,l.f?1600:900)}" srcset="${srcset(l.img)}" sizes="${l.f?'(max-width:960px) 100vw, 66vw':'(max-width:600px) 100vw, (max-width:960px) 50vw, 33vw'}" alt="${l.name}, ${l.unit}"></div>
+      <div class="l-row"><h3>${l.name}</h3><span class="l-price">${money(l.price)}<small> ${l.per}</small></span></div>
+      <div class="l-specs"><span>${l.unit}</span>${l.specs.map(s=>`<span>${s}</span>`).join('')}</div>
+      <div class="l-foot"><span class="avail ${l.c}">${l.av}</span><button type="button" data-tour="${l.name}">${l.t==='retail'?'Request floor plan':'Book a tour'}</button></div>
+    </article>`).join('');
+}
+function setFilter(f){filt=f;$$('.tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.f===f));renderL();}
+$$('.tabs button').forEach(b=>b.onclick=()=>setFilter(b.dataset.f));
+$$('[data-tab]').forEach(a=>a.addEventListener('click',()=>{setFilter(a.dataset.tab);closeMenu();}));
+$('#lGrid').addEventListener('click',e=>{const b=e.target.closest('[data-tour]');if(b)toast(`Tour request started for ${b.dataset.tour}. We confirm by text the same day.`)});
+renderL();
+
+/* storage plan */
+const PRICE={'5x5':39,'5x10':59,'10x10':95,'10x20':165};
+const NAME={'5x5':'5′ × 5′','5x10':'5′ × 10′','10x10':'10′ × 10′','10x20':'10′ × 20′'};
+const FEAT={'5x5':'climate controlled, interior hallway','5x10':'climate controlled, elevator access','10x10':'drive-up, roll-up door','10x20':'drive-up, 9′ roll-up door, vehicles OK'};
+const FAC={north:{n:'Northgate Storage',c:'N',seed:7},east:{n:'Eastside Storage',c:'E',seed:19},river:{n:'Riverside Storage',c:'R',seed:31}};
+const ROWS=[{b:'A',s:'10x20',n:12,info:'Drive-up'},{aisle:1},{b:'B',s:'10x10',n:16,info:'Drive-up'},{b:'C',s:'5x10',n:20,info:'Climate controlled'},{aisle:1},{b:'D',s:'5x5',n:26,info:'Climate controlled lockers'}];
+let units=[],sel=null,size='all';const cart=[];
+const rng=s=>()=> (s=(s*9301+49297)%233280)/233280;
+function build(){
+  const f=FAC[$('#facility').value],r=rng(f.seed);units=[];sel=null;
+  $('#plan').innerHTML=ROWS.map(row=>{
+    if(row.aisle) return `<div class="aisle"><span>DRIVE AISLE</span></div>`;
+    let cells='';
+    for(let i=1;i<=row.n;i++){
+      const num=String(i).padStart(2,'0'),id=`${f.c}-${row.b}${num}`,free=r()>.6;
+      units.push({id,s:row.s,b:row.b,free,fac:f.n,price:PRICE[row.s]+(i%5===0?6:0)});
+      cells+=`<button type="button" class="unit s${row.s} ${free?'free':'taken'}" data-id="${id}" ${free?'':'disabled'} aria-label="Unit ${id}, ${NAME[row.s]}, ${free?'open':'rented'}">${num}</button>`;
+    }
+    const open=units.filter(u=>u.b===row.b&&u.free).length;
+    return `<div class="bl"><span class="bl-tag">${row.b}</span><div><div class="bl-info"><span>${NAME[row.s]} · ${row.info}</span><span>${open} open</span></div><div class="row">${cells}</div></div></div>`;
+  }).join('');
+  $('#openCount').textContent=`${units.filter(u=>u.free).length} of ${units.length} units open`;
+  paint();pick();
+}
+const inCart=id=>cart.some(c=>c.id===id);
+function paint(){$$('.unit').forEach(el=>{const u=units.find(x=>x.id===el.dataset.id);el.classList.toggle('sel',!!sel&&sel.id===u.id&&!inCart(u.id));el.classList.toggle('incart',inCart(u.id));el.classList.toggle('dim',size!=='all'&&u.s!==size)})}
+function setSize(s){
+  size=(s===size&&s!=='all')?'all':s;
+  $$('.size').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===size));
+  if(sel&&size!=='all'&&sel.s!==size) sel=null;
+  if(!sel&&size!=='all') sel=units.find(u=>u.free&&u.s===size&&!inCart(u.id))||null;
+  paint();pick();
+}
+$$('.size').forEach(b=>b.onclick=()=>setSize(b.dataset.s));
+$('#facility').onchange=()=>{const s=size;size='all';build();if(s!=='all')setSize(s)};
+$('#plan').addEventListener('click',e=>{const el=e.target.closest('.unit.free');if(!el)return;sel=units.find(u=>u.id===el.dataset.id);paint();pick()});
+function pick(){
+  const p=$('#pick');
+  if(!sel){p.className='pick empty';p.innerHTML='Choose a size on the left or tap any open unit on the plan.';return}
+  const u=sel,inc=inCart(u.id);p.className='pick';
+  p.innerHTML=`<span class="id">${u.id}</span>
+    <span class="desc"><b>${NAME[u.s]}</b>, ${FEAT[u.s]}. Building ${u.b}, ${u.fac}. 24-hour gate access.</span>
+    <span class="rate"><s>${money(Math.round(u.price*1.2))}</s><b>${money(u.price)}</b>/mo<small>First month $1 online</small></span>
+    <button class="btn ${inc?'btn-line':'btn-ink'}" type="button" id="add">${inc?'In cart, view':'Add to cart'}</button>`;
+  $('#add').onclick=()=>{if(inc){openCart();return}cart.push({...u});renderCart();paint();pick();toast(`Unit ${u.id} is in your cart.`,true)};
+}
+build();
+
+/* cart */
+let protect=true,lock=false,done=false,moveIn=(()=>{const d=new Date();d.setDate(d.getDate()+3);return d.toISOString().slice(0,10)})();
+function renderCart(){
+  $('#cartN').textContent=cart.length;
+  const B=$('#dBody'),F=$('#dFoot');
+  if(done){B.innerHTML=`<div class="d-done"><span class="label soft">Reserved</span><span class="ref">ADR-S-48213</span><p class="soft">Your gate code and rental agreement are waiting in your ADR account. Nothing is charged until move-in on ${new Date(moveIn+'T12:00').toLocaleDateString('en-US',{month:'long',day:'numeric'})}.</p><button class="btn btn-ink" type="button" data-login>Open my account</button></div>`;F.innerHTML='';return}
+  if(!cart.length){B.innerHTML=`<div class="d-empty"><p>Your cart is empty. Pick a unit on the storage plan to reserve it.</p><a class="btn btn-ink" href="#storage" id="goSt">Go to storage</a></div>`;F.innerHTML='';$('#goSt').onclick=closeCart;return}
+  const n=cart.length,rent=cart.reduce((s,c)=>s+c.price,0);
+  B.innerHTML=cart.map(c=>`<div class="li"><b>Unit ${c.id}</b><span class="p">${money(c.price)}/mo</span><small>${NAME[c.s]} · ${c.fac}</small><button class="rm" type="button" data-rm="${c.id}">Remove</button></div>`).join('')+`
+    <div class="d-field"><label for="mDate">Move-in date</label><input type="date" id="mDate" value="${moveIn}"></div>
+    <label class="opt"><input type="checkbox" id="oProt" ${protect?'checked':''}><span>Contents protection, $2,000 cover<small>$12 a month per unit. Skip it if your own policy covers storage.</small></span></label>
+    <label class="opt"><input type="checkbox" id="oLock" ${lock?'checked':''}><span>Disc lock, left in your unit<small>$15 once per unit</small></span></label>`;
+  const prot=protect?12*n:0,lk=lock?15*n:0,due=n+25+prot+lk;
+  F.innerHTML=`<div class="sum"><span>First month, web rate</span><span>${money(n)}</span></div>
+    ${prot?`<div class="sum"><span>Contents protection</span><span>${money(prot)}</span></div>`:''}
+    ${lk?`<div class="sum"><span>Disc lock</span><span>${money(lk)}</span></div>`:''}
+    <div class="sum"><span>Admin fee, one time</span><span>$25</span></div>
+    <div class="sum total"><span>Due at move-in</span><span>${money(due)}</span></div>
+    <div class="sum after"><span>Then each month</span><span>${money(rent+prot)}</span></div>
+    <button class="btn btn-cobalt" type="button" id="reserve">Reserve ${n>1?n+' units':'unit'}</button>`;
+  $$('[data-rm]').forEach(b=>b.onclick=()=>{cart.splice(cart.findIndex(c=>c.id===b.dataset.rm),1);renderCart();paint();pick()});
+  $('#mDate').onchange=e=>moveIn=e.target.value;
+  $('#oProt').onchange=e=>{protect=e.target.checked;renderCart()};
+  $('#oLock').onchange=e=>{lock=e.target.checked;renderCart()};
+  $('#reserve').onclick=()=>{cart.forEach(c=>{const u=units.find(x=>x.id===c.id);if(u)u.free=false});cart.length=0;done=true;renderCart();const s=size;size='all';build();if(s!=='all')setSize(s);$('#cartN').textContent='0'};
+}
+function openCart(){$('#toast').classList.remove('show');$('#drawer').classList.add('open');$('#scrim').classList.add('open');$('#drawer').setAttribute('aria-hidden','false')}
+function closeCart(){$('#drawer').classList.remove('open');$('#scrim').classList.remove('open');$('#drawer').setAttribute('aria-hidden','true');if(done){done=false;renderCart()}}
+$('#cartBtn').onclick=openCart;$('#closeCart').onclick=closeCart;$('#scrim').onclick=closeCart;
+renderCart();
+
+/* modals */
+const openM=id=>{closeCart();$(id).hidden=false;setTimeout(()=>{const f=$(id).querySelector('input,select');f&&f.focus()},30)};
+const closeM=()=>$$('.modal').forEach(m=>m.hidden=true);
+document.addEventListener('click',e=>{if(e.target.closest('[data-login]'))openM('#loginModal');if(e.target.closest('[data-close]'))closeM()});
+$('#newReq').onclick=()=>openM('#reqModal');
+document.addEventListener('click',e=>{if(e.target.closest('[data-req]'))openM('#reqModal')});
+$('#loginForm').onsubmit=e=>{e.preventDefault();closeM();$('#residents').scrollIntoView();toast('Signed in to the preview account.')};
+$('#reqForm').onsubmit=e=>{
+  e.preventDefault();const msg=$('#rMsg').value.trim()||'No details given';closeM();
+  const unit=$('#rUnit').value.split(', ');
+  $('#tTitle').textContent=$('#rCat').value;$('#tMeta').innerHTML=unit[0]+'<br>'+unit[1];
+  document.querySelector('.ticket .label').textContent='Request 20418';
+  const now=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}).toLowerCase();
+  $('#log').innerHTML=`<li class="now"><span class="dot"></span><div><b>Submitted</b><p>"${msg.replace(/</g,'&lt;')}"</p></div><time>Today, ${now}</time></li>
+    <li class="todo"><span class="dot"></span><div><b>Assigned</b><p>A technician is usually assigned within 2 hours.</p></div><time>Pending</time></li>
+    <li class="todo"><span class="dot"></span><div><b>Visit scheduled</b><p>You'll choose a time window.</p></div><time>Pending</time></li>
+    <li class="todo"><span class="dot"></span><div><b>Resolved</b><p>You'll be asked to confirm the fix.</p></div><time>Pending</time></li>`;
+  $('#residents').scrollIntoView();toast('Request 20418 sent. Updates come by text and email.');
+};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeM();closeCart()}});
+
+/* nav */
+function closeMenu(){$('#nav').classList.remove('open');$('#menuBtn').setAttribute('aria-expanded','false');$('#menuBtn').textContent='Menu'}
+$('#menuBtn').onclick=()=>{const o=$('#nav').classList.toggle('open');$('#menuBtn').setAttribute('aria-expanded',o);$('#menuBtn').textContent=o?'Close':'Menu'};
+$$('#nav a').forEach(a=>a.addEventListener('click',closeMenu));
+
+/* properties */
+const P=[['Riverside Lofts','410 River St','Apartments, storage',7],['Maple Court','77 Maple Ct','Townhomes',1],['The Foundry','1200 Foundry Ave','Apartments',14],['Parkview Residences','55 Parkview Blvd','Apartments',0],['Northgate Storage','1840 Industrial Way','Self storage',41],['Eastside Storage','92 Commerce Row','Self storage',38],['Commerce Row','92 Commerce Row','Retail',2],['Market Street Shops','318 Market St','Retail',2],['Parkview Plaza','60 Parkview Blvd','Retail, office',2]];
+$('#pList').innerHTML=P.map(p=>`<a class="p-row" href="#homes"><h3>${p[0]}</h3><span class="addr">${p[1]}</span><span class="type soft">${p[2]}</span><span class="open ${p[3]?'':'none'}">${p[3]?p[3]+' open':'Full, waitlist'}</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>`).join('');
+
+/* toast */
+let tt;function toast(m,c){$('#toastMsg').textContent=m;$('#toastBtn').hidden=!c;$('#toast').classList.add('show');clearTimeout(tt);tt=setTimeout(()=>$('#toast').classList.remove('show'),4000)}
+$('#toastBtn').onclick=openCart;
+})();
+</script>
+
+<button class="to-top" id="toTop" type="button" aria-label="Back to top">
+  <svg class="ring" viewBox="0 0 52 52" aria-hidden="true"><rect x="1" y="1" width="50" height="50" fill="none" stroke="var(--cobalt)" stroke-width="2" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" id="ring"/></svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+</button>
+<script>
+(function(){
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+/* wrap trailing arrows so they can move on hover */
+$$('.arrow-link, .btn').forEach(el=>{
+  if(el.children.length) return;
+  const t = el.textContent;
+  if(/→\s*$/.test(t)) el.innerHTML = t.replace(/\s*→\s*$/, ' <span class="ar">→</span>');
+});
+
+/* ripple from the pointer on every .btn */
+document.addEventListener('pointerdown', e=>{
+  const b = e.target.closest('.btn'); if(!b || reduce) return;
+  const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2.2;
+  const sp = document.createElement('span');
+  sp.className = 'ripple';
+  sp.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d/2}px;top:${e.clientY - r.top - d/2}px`;
+  b.appendChild(sp);
+  sp.addEventListener('animationend', ()=>sp.remove());
+});
+
+/* add-to-cart: a unit-coloured square flies to the cart, then the cart bumps */
+document.addEventListener('click', e=>{
+  const add = e.target.closest('#add');
+  if(!add || /view/i.test(add.textContent) || reduce) return;
+  const a = add.getBoundingClientRect(), c = $('#cartBtn').getBoundingClientRect();
+  const f = document.createElement('div'); f.className='flyer'; document.body.appendChild(f);
+  const x0=a.left+a.width/2-11, y0=a.top+a.height/2-11, x1=c.left+c.width/2-11, y1=c.top+c.height/2-11;
+  const anim = f.animate([
+    {transform:`translate(${x0}px,${y0}px) scale(1)`, opacity:1},
+    {transform:`translate(${(x0+x1)/2}px,${Math.min(y0,y1)-120}px) scale(1.2) rotate(90deg)`, opacity:1, offset:.5},
+    {transform:`translate(${x1}px,${y1}px) scale(.35) rotate(180deg)`, opacity:.6}
+  ], {duration:750, easing:'cubic-bezier(.5,0,.3,1)'});
+  anim.onfinish = ()=>{ f.remove(); bump(); };
+}, true);
+function bump(){ const b=$('#cartBtn'); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); }
+new MutationObserver(()=>{ if(reduce) bump(); }).observe($('#cartN'), {childList:true, characterData:true, subtree:true});
+
+/* listings re-enter with a stagger when the filter changes */
+new MutationObserver(()=>{
+  [...$('#lGrid').children].forEach((el,i)=>{ el.classList.add('enter'); el.style.animationDelay = (i*70)+'ms'; });
+}).observe($('#lGrid'), {childList:true});
+
+/* reveal on scroll */
+if(!reduce && 'IntersectionObserver' in window){
+  document.documentElement.classList.add('motion');
+  const sel = ['.intro .wrap > *','.sec-top','.pf','.pr','.listing','.st-intro','.plan-wrap','.portal .wrap > div:first-child','.ticket','.rv','.p-row','.ap-grid > div','.ow-grid > div:first-child','.ow-list > div','.contact .wrap > *','.fine'];
+  const els = $$(sel.join(','));
+  els.forEach(el=>{
+    const sibs = [...el.parentElement.children].filter(x=>x.matches(sel.join(',')));
+    el.style.setProperty('--d', (Math.min(sibs.indexOf(el),5) * 0.09) + 's');
+    el.classList.add('reveal');
+  });
+  const io = new IntersectionObserver(entries=>entries.forEach(en=>{
+    if(!en.isIntersecting) return;
+    en.target.classList.add('in'); io.unobserve(en.target);
+    countUp(en.target);
+  }), {rootMargin:'0px 0px -8% 0px', threshold:.08});
+  els.forEach(el=>io.observe(el));
+}
+
+/* numbers count up the first time they appear */
+function countUp(scope){
+  if(reduce) return;
+  scope.querySelectorAll('.pf-num b, .pr b, .ow-list b, .rating b').forEach(el=>{
+    if(el.dataset.counted) return; el.dataset.counted = 1;
+    const m = el.textContent.match(/^(\D*)(\d+(?:\.\d+)?)(.*)$/); if(!m || +m[2]===0) return;
+    const [ , pre, num, post] = m, target = parseFloat(num), dec = (num.split('.')[1]||'').length;
+    const t0 = performance.now(), dur = 1200;
+    const tick = now=>{
+      const p = Math.min((now - t0)/dur, 1), e = 1 - Math.pow(1-p, 3);
+      el.textContent = pre + (target*e).toFixed(dec) + post;
+      if(p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+$$('.rating').forEach(r=>{ const sec=r.closest('.sec-top'); if(sec && !sec.classList.contains('reveal')) countUp(sec); });
+
+/* scroll-driven: progress line, compact header, parallax, back-to-top, active nav */
+const header = $('#siteHeader'), prog = $('#progress'), heroImg = $('.hero-img img'), heroCopy = $('.hero-copy'), top = $('#toTop'), ring = $('#ring');
+const parallax = !reduce && matchMedia('(hover: hover) and (pointer: fine) and (min-width: 761px)').matches;
+let ticking = false;
+function onScroll(){
+  const y = scrollY, max = document.documentElement.scrollHeight - innerHeight, pct = max>0 ? y/max : 0;
+  prog.style.transform = `scaleX(${pct})`;
+  ring.style.strokeDashoffset = 100 - pct*100;
+  header.classList.toggle('compact', y > 120);
+  top.classList.toggle('show', y > 900);
+  if(parallax && y < 900){
+    heroImg.style.transform = `translate3d(0,${y*0.22}px,0)`;
+    heroCopy.style.transform = `translate3d(0,${y*-0.12}px,0)`;
+    heroCopy.style.opacity = Math.max(0, 1 - y/520);
+  }
+  ticking = false;
+}
+addEventListener('scroll', ()=>{ if(!ticking){ ticking = true; requestAnimationFrame(onScroll); } }, {passive:true});
+onScroll();
+top.addEventListener('click', ()=>scrollTo({top:0, behavior: reduce ? 'auto' : 'smooth'}));
+
+const planScroll = $('#planScroll');
+function showPicked(){
+  const u = planScroll.querySelector('.unit.sel'); if(!u) return;
+  const pr = planScroll.getBoundingClientRect(), ur = u.getBoundingClientRect();
+  if(ur.left < pr.left || ur.right > pr.right)
+    planScroll.scrollTo({left: planScroll.scrollLeft + ur.left - pr.left - pr.width/2 + ur.width/2, behavior: reduce ? 'auto' : 'smooth'});
+}
+document.addEventListener('click', e=>{ if(e.target.closest('.size, #searchForm button')) setTimeout(showPicked, 60); });
+planScroll.addEventListener('scroll', ()=>{ const h=$('.swipe-hint'); if(h && planScroll.scrollLeft>20) h.style.visibility='hidden'; }, {passive:true});
+
+const links = $$('nav.main a'), seen = new Set();
+const targets = links.map(a=>a.getAttribute('href')).filter(h=>{ if(seen.has(h)) return false; seen.add(h); return true; }).map(h=>$(h)).filter(Boolean);
+const spy = new IntersectionObserver(entries=>entries.forEach(en=>{
+  if(!en.isIntersecting) return;
+  const id = '#'+en.target.id; let marked = false;
+  links.forEach(a=>{ const on = a.getAttribute('href')===id && !marked; if(on) marked = true; a.classList.toggle('on', on); });
+}), {rootMargin:'-45% 0px -50% 0px'});
+targets.forEach(t=>spy.observe(t));
+})();
+</script>
+</body>
+</html>
